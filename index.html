@@ -21,6 +21,18 @@
         <p id="support-note" class="support-note" role="status"></p>
       </section>
       <aside id="mode-status" class="mode-status" hidden></aside>
+      <!-- PROVISIONAL: engineering placeholder until the Figma menu and map designs exist. -->
+      <button id="menu-toggle" class="menu-toggle secondary" type="button" aria-controls="desktop-menu" aria-expanded="false" hidden>Menu (Tab)</button>
+      <section id="desktop-menu" class="desktop-menu" aria-label="Menu" hidden>
+        <div id="desktop-menu-root" class="actions">
+          <button id="desktop-menu-open-map" type="button">Map</button>
+          <button id="desktop-menu-close" class="secondary" type="button">Close</button>
+        </div>
+        <div id="desktop-menu-map" hidden>
+          <div id="desktop-map-area" class="map-area" aria-label="Map destinations"></div>
+          <button id="desktop-map-back" class="secondary" type="button">Back</button>
+        </div>
+      </section>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

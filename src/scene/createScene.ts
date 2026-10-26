@@ -1,64 +1,18 @@
 import * as THREE from 'three';
+import {
+  createGrayboxEnvironment,
+  type GrayboxEnvironment,
+} from './createGrayboxEnvironment';
 
 export interface SceneRuntime {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
   player: THREE.Group;
+  environment: GrayboxEnvironment;
+  /** 0 = clear, 1 = fully faded; used by scene transitions in both modes. */
+  setFade(opacity: number): void;
   dispose(): void;
-}
-
-function addGraybox(scene: THREE.Scene): void {
-  const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(16, 16),
-    new THREE.MeshStandardMaterial({ color: 0xb8bcc2, roughness: 0.95 }),
-  );
-  ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
-  scene.add(ground);
-
-  const grid = new THREE.GridHelper(16, 16, 0x5f6670, 0x9298a1);
-  grid.position.y = 0.002;
-  scene.add(grid);
-
-  const markerMaterial = new THREE.MeshStandardMaterial({ color: 0x2d7d7a });
-  const markers: ReadonlyArray<readonly [number, number]> = [
-    [0, -2],
-    [2, -4],
-    [-2, -6],
-  ];
-
-  markers.forEach(([x, z]) => {
-    const marker = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.45, 0.45, 0.035, 32),
-      markerMaterial,
-    );
-    marker.position.set(x, 0.02, z);
-    scene.add(marker);
-  });
-
-  const frameMaterial = new THREE.MeshStandardMaterial({ color: 0x626871 });
-  const frameParts: ReadonlyArray<readonly [number, number, number, number, number]> = [
-    [-1.1, 1.25, -7, 0.25, 2.5],
-    [1.1, 1.25, -7, 0.25, 2.5],
-    [0, 2.4, -7, 2.45, 0.2],
-  ];
-
-  frameParts.forEach(([x, y, z, width, height]) => {
-    const part = new THREE.Mesh(
-      new THREE.BoxGeometry(width, height, 0.3),
-      frameMaterial,
-    );
-    part.position.set(x, y, z);
-    scene.add(part);
-  });
-
-  const grabbable = new THREE.Mesh(
-    new THREE.BoxGeometry(0.35, 0.35, 0.35),
-    new THREE.MeshStandardMaterial({ color: 0xd08b3e }),
-  );
-  grabbable.position.set(-1.5, 0.3, -3.5);
-  scene.add(grabbable);
 }
 
 export function createScene(canvas: HTMLCanvasElement): SceneRuntime {
@@ -67,11 +21,30 @@ export function createScene(canvas: HTMLCanvasElement): SceneRuntime {
   scene.fog = new THREE.Fog(0xdfe3e8, 10, 24);
 
   const camera = new THREE.PerspectiveCamera(65, 1, 0.05, 50);
-  camera.position.set(0, 1.65, 3);
+  camera.position.set(0, 1.65, 0);
 
   const player = new THREE.Group();
   player.add(camera);
+
+  // Head-locked veil: follows the viewer in desktop and immersive modes.
+  const fadeMaterial = new THREE.MeshBasicMaterial({
+    color: 0x000000,
+    side: THREE.BackSide,
+    transparent: true,
+    opacity: 0,
+    depthTest: false,
+    depthWrite: false,
+  });
+  const fadeVeil = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12), fadeMaterial);
+  fadeVeil.name = 'transition-fade-veil';
+  fadeVeil.renderOrder = 1000;
+  fadeVeil.visible = false;
+  camera.add(fadeVeil);
   scene.add(player);
+
+  const environment = createGrayboxEnvironment();
+  player.position.copy(environment.anchors.spawn);
+  scene.add(environment.root);
 
   const renderer = new THREE.WebGLRenderer({
     canvas,
@@ -87,8 +60,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneRuntime {
   const keyLight = new THREE.DirectionalLight(0xffffff, 2.4);
   keyLight.position.set(3, 6, 2);
   scene.add(keyLight);
-
-  addGraybox(scene);
 
   const resize = (): void => {
     const width = window.innerWidth;
@@ -106,6 +77,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneRuntime {
     camera,
     renderer,
     player,
+    environment,
+    setFade: (opacity) => {
+      fadeMaterial.opacity = THREE.MathUtils.clamp(opacity, 0, 1);
+      fadeVeil.visible = fadeMaterial.opacity > 0;
+    },
     dispose: () => {
       window.removeEventListener('resize', resize);
       renderer.dispose();

@@ -10,6 +10,13 @@ export interface EntryUI {
   render(state: Readonly<AppState>): void;
 }
 
+export function canContinueOnScreen(state: Readonly<AppState>): boolean {
+  return (
+    state.sceneReady &&
+    ['ready', 'vr-unavailable', 'recoverable-error'].includes(state.status)
+  );
+}
+
 function requireElement<T extends HTMLElement>(id: string): T {
   const element = document.querySelector<T>(`#${id}`);
   if (!element) {
@@ -39,11 +46,7 @@ export function createEntryUI(callbacks: EntryUICallbacks): EntryUI {
       message.textContent = state.message;
       enterVR.hidden = state.immersiveVRSupported !== true;
       enterVR.disabled = state.status !== 'ready';
-      continueScreen.disabled = ![
-        'ready',
-        'vr-unavailable',
-        'recoverable-error',
-      ].includes(state.status);
+      continueScreen.disabled = !canContinueOnScreen(state);
       retry.hidden = state.status !== 'recoverable-error';
       supportNote.textContent =
         state.immersiveVRSupported === false

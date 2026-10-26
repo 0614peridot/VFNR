@@ -11,6 +11,7 @@ export type AppStatus =
 export interface AppState {
   mode: AppMode;
   status: AppStatus;
+  sceneReady: boolean;
   immersiveVRSupported: boolean | null;
   message: string;
 }
@@ -26,6 +27,7 @@ export interface AppStore {
 export const initialAppState: AppState = {
   mode: 'undecided',
   status: 'loading',
+  sceneReady: false,
   immersiveVRSupported: null,
   message: 'Preparing the shared 3D experience…',
 };
